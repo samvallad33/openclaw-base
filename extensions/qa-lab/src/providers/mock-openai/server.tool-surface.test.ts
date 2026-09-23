@@ -193,14 +193,23 @@ describe("mock tool surface dispatch", () => {
     "binds crossed same-case parent responses to their matching workers (structured=%s)",
     async (structured) => {
       const server = await startMockServer();
+      server.terminalRequesters.bindGateway({
+        call: async () => ({
+          sessions: ["qa-terminal-parent-1", "qa-terminal-parent-2"].map((sessionId) => ({
+            key: `agent:qa:${sessionId}`,
+            agentId: "qa",
+            sessionId,
+          })),
+        }),
+      });
       const firstChildSessionKey = "agent:qa:subagent:child-1";
       const secondChildSessionKey = "agent:qa:subagent:child-2";
-      const startChild = (runtimeSessionId: string, childSessionKey: string) =>
+      const startChild = (childSessionKey: string) =>
         postResponses(server, {
           stream: false,
           model: "gpt-5.6-luna",
           instructions: [
-            `Runtime: embedded | sessionId=${runtimeSessionId}`,
+            `Runtime: embedded | agent=qa | session=${childSessionKey}`,
             `- Your session: ${childSessionKey}.`,
           ].join("\n"),
           input: [makeUserInput("Subagent terminal reply QA worker: visible.")],
@@ -212,7 +221,7 @@ describe("mock tool surface dispatch", () => {
       ) => {
         const parent = await expectNonStreamingResponsesJson(server, {
           model: "gpt-5.6-luna",
-          instructions: `Runtime: embedded | agent=qa | session=agent:qa:${runtimeSessionId} | sessionId=${runtimeSessionId}`,
+          instructions: `Runtime: embedded | agent=qa | session=agent:qa:${runtimeSessionId}`,
           tools: structured ? STRUCTURED_CATALOG_TOOLS : [SESSIONS_SPAWN_TOOL, SESSIONS_YIELD_TOOL],
           input: [
             makeUserInput("Subagent terminal reply QA check: visible."),
@@ -265,8 +274,8 @@ describe("mock tool surface dispatch", () => {
         });
       };
 
-      const firstChildResponse = startChild("qa-terminal-child-1", firstChildSessionKey);
-      const secondChildResponse = startChild("qa-terminal-child-2", secondChildSessionKey);
+      const firstChildResponse = startChild(firstChildSessionKey);
+      const secondChildResponse = startChild(secondChildSessionKey);
       let firstChildSettled = false;
       let secondChildSettled = false;
       void firstChildResponse.then(() => {

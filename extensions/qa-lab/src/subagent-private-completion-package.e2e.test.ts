@@ -269,6 +269,7 @@ describe.skipIf(!candidateTarball)("private completion installed-package compati
         }),
       });
       expect(started.runtimeEnv.OPENCLAW_DEV_SOURCE_ROOT).toBeUndefined();
+      mock.terminalRequesters.bindGateway(started);
       expect(started.runtimeEnv.OPENCLAW_BUNDLED_PLUGINS_DIR).toBeUndefined();
       observer = await observeChat(started, events);
       return {

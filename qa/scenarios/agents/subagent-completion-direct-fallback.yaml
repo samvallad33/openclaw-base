@@ -279,6 +279,14 @@ flow:
               - set: privateParentSessionKey
                 value:
                   expr: "(await readSettledTerminalTask(config.cases[config.cases.length - 1].name)).sessionKey"
+              - set: readPrivateParentSession
+                value:
+                  lambda:
+                    async: true
+                    expr: "(await env.gateway.call('sessions.list', { agentId: 'qa', search: privateParentSessionKey, excludeSubagents: true, limit: 100 }, { timeoutMs: 10000 })).sessions?.find((session) => session.key === privateParentSessionKey && session.agentId === 'qa')"
+              - set: privateParentSessionBefore
+                value:
+                  expr: "await readPrivateParentSession()"
               - call: readSessionTranscriptSummary
                 saveAs: privateTranscriptBefore
                 args:
@@ -363,11 +371,11 @@ flow:
                   expr: "privateCompletionCarrier.includes('Internal task completion event') && /MEDIA:[^\\n]*qa-private-result\\.png/.test(privateCompletionCarrier)"
                   message:
                     expr: "`The actual private completion carrier lost the child's media reference: ${JSON.stringify({ carrier: privateCompletionCarrier.slice(0, 8192), childSessionKeys: privateTasks.map((task) => task.childSessionKey) })}`"
-              - set: privateParentIds
+              - set: privateParentSessionAfter
                 value:
-                  expr: 'privateSpawns.map((request) => /Runtime:[^\n]*sessionId=([^\s|]+)/.exec(request.allInputText)?.[1])'
+                  expr: "await readPrivateParentSession()"
               - assert:
-                  expr: "privateParentIds[0] && privateParentIds[0] === privateParentIds[1] && privateTasks[0].sessionKey === privateTasks[1].sessionKey && privateTasks[0].sessionKey === privateParentSessionKey"
+                  expr: "privateParentSessionBefore?.sessionId && privateParentSessionBefore.sessionId === privateParentSessionAfter?.sessionId && privateTasks[0].sessionKey === privateTasks[1].sessionKey && privateTasks[0].sessionKey === privateParentSessionKey"
                   message: Private continuation changed its parent session.
               - call: readEffectiveTools
                 saveAs: privateTools

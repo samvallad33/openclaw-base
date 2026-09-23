@@ -342,13 +342,17 @@ describe("mock terminal subagents through structured Tool Search", () => {
     "spawns and settles the %s worker through the exposed dispatcher",
     async (terminalCase) => {
       const server = await startQaMockOpenAiServer({ host: "127.0.0.1", port: 0 });
+      server.terminalRequesters.bindGateway({
+        call: async () => ({
+          sessions: [{ key: "agent:qa:main", agentId: "qa", sessionId: "structured-parent" }],
+        }),
+      });
       try {
         const prompt = `Subagent terminal reply QA check: ${terminalCase}. Spawn one native worker, reply to the requester after spawning, then finish without waiting. Do not use ACP.`;
         const input = [user(prompt), metadataCarrier];
         const parent = {
           model: "gpt-5.6-luna",
-          instructions:
-            "Runtime: embedded | agent=qa | session=agent:qa:main | sessionId=structured-parent",
+          instructions: "Runtime: embedded | agent=qa | session=agent:qa:main",
           tools: structuredTools,
         };
         const spawn = await expectNonStreamingResponsesJson(server, { ...parent, input });
@@ -406,7 +410,7 @@ describe("mock terminal subagents through structured Tool Search", () => {
         });
         const child = {
           model: "gpt-5.6-luna",
-          instructions: `Runtime: embedded | sessionId=structured-child\n- Your session: ${childSessionKey}.`,
+          instructions: `Runtime: embedded | agent=qa | session=${childSessionKey}\n- Your session: ${childSessionKey}.`,
           tools: structuredTools,
           input: [user(String(requireRecord(args.args, "spawn arguments").task)), metadataCarrier],
         };

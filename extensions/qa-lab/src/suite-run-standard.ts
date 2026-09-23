@@ -197,6 +197,7 @@ export async function runQaFlowSuiteStandard(
       alternateModel,
       webSessionIds: new Set(),
     };
+    activeMock?.terminalRequesters?.bindGateway(activeGateway);
     env = activeEnv;
 
     // Lifecycle scenarios deliberately start a blocked channel. Waiting for

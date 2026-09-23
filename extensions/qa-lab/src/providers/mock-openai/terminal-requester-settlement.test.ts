@@ -62,6 +62,34 @@ describe("terminal requester settlement", () => {
     }
   });
 
+  it("pins the requester generation before the spawn response and rejects its replacement", async () => {
+    const gate = createTerminalRequesterSettleGate();
+    const call = vi.fn(async () => ({ sessions: [settledSession] }));
+    gate.bindGateway({ call });
+    const runtime = "Runtime: embedded | agent=qa | session=agent:qa:main";
+    const captured = await gate.captureRequester(requester.caseName, runtime);
+    expect(captured).toMatchObject({ sessionId: requester.sessionId });
+    gate.onResponseSent({ ...requester, ...captured });
+    let released = false;
+    const child = gate.waitUntilSettled(requester.caseName, requester.childSessionKey).then(() => {
+      released = true;
+    });
+    void child.catch(() => {});
+    try {
+      call.mockResolvedValue({ sessions: [{ ...settledSession, sessionId: "replacement" }] });
+      expect(await gate.captureRequester(requester.caseName, runtime)).toEqual(captured);
+      await gate.settle({ call });
+      expect(released).toBe(false);
+      call.mockResolvedValue({ sessions: [settledSession] });
+      await gate.settle({ call });
+      await child;
+      expect(released).toBe(true);
+    } finally {
+      gate.stop();
+      await child.catch(() => {});
+    }
+  });
+
   it("releases only the child correlated with the settled parent", async () => {
     const gate = createTerminalRequesterSettleGate();
     const other = {

@@ -2158,6 +2158,13 @@ export async function startQaMockOpenAiServer(params?: QaMockOpenAiServerOptions
       return { events: buildAssistantEvents("The requested work is in progress."), model };
     }
     const subagentTurn = resolveMockSubagentTurn(input);
+    const terminalRequester =
+      subagentTurn?.kind === "kickoff" && subagentTurn.caseName
+        ? await terminalRequesterSettleGate.captureRequester(
+            subagentTurn.caseName,
+            extractAllRequestTexts(input, body),
+          )
+        : undefined;
     const prompt = extractLastUserText(input);
     const allInputText = extractAllRequestTexts(input, body);
     const scenarioState = scenarioStateFor(body);
@@ -2260,27 +2267,7 @@ export async function startQaMockOpenAiServer(params?: QaMockOpenAiServerOptions
     }
     const plannedToolIdentity = extractPlannedToolIdentity(events);
     const plannedTool = extractScenarioPlannedTool(events);
-    const terminalRequesterCase =
-      subagentTurn?.kind === "kickoff" ? subagentTurn.caseName : undefined;
-    const runtime = /\bRuntime:\s*([^\n]+)/u.exec(extractAllRequestTexts(input, body))?.[1];
-    const requesterAgentId = runtime && /\bagent=([^\s|]+)/u.exec(runtime)?.[1];
-    const requesterSessionKey = runtime && /\bsession=([^\s|]+)/u.exec(runtime)?.[1];
-    const requesterSessionId = resolveQaRuntimeSessionId(input, body);
     const childSessionKey = resolveAcceptedChildSessionKey(input);
-    const terminalRequester =
-      terminalRequesterCase &&
-      requesterAgentId &&
-      requesterSessionKey &&
-      requesterSessionId &&
-      childSessionKey
-        ? {
-            caseName: terminalRequesterCase,
-            childSessionKey,
-            agentId: requesterAgentId,
-            sessionKey: requesterSessionKey,
-            sessionId: requesterSessionId,
-          }
-        : undefined;
     const failure =
       injectedFailure ??
       (QA_PROVIDER_HTTP_503_AFTER_TOOL_PROMPT_RE.test(allInputText) && hasToolOutput(input)
@@ -2319,9 +2306,10 @@ export async function startQaMockOpenAiServer(params?: QaMockOpenAiServerOptions
     return {
       events,
       model,
-      ...(terminalRequester
+      ...(terminalRequester && childSessionKey
         ? {
-            onResponseSent: () => terminalRequesterSettleGate.onResponseSent(terminalRequester),
+            onResponseSent: () =>
+              terminalRequesterSettleGate.onResponseSent({ ...terminalRequester, childSessionKey }),
           }
         : {}),
       ...(failure ? { failure } : {}),
@@ -2530,7 +2518,10 @@ export async function startQaMockOpenAiServer(params?: QaMockOpenAiServerOptions
 
   return {
     baseUrl: formatUrl({ protocol: "http", hostname: host, port: address.port }),
-    terminalRequesters: { settle: terminalRequesterSettleGate.settle },
+    terminalRequesters: {
+      bindGateway: terminalRequesterSettleGate.bindGateway,
+      settle: terminalRequesterSettleGate.settle,
+    },
     async stop() {
       terminalRequesterSettleGate.stop();
       await responsesWebSocket.close();

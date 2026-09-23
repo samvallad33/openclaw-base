@@ -309,13 +309,17 @@ describe("mock scenario tool routing", () => {
   });
   it("releases the matching terminal worker after a catalog spawn receipt settles its parent", async () => {
     const server = await startMockServer();
+    server.terminalRequesters.bindGateway({
+      call: async () => ({
+        sessions: [{ key: "agent:qa:main", agentId: "qa", sessionId: "qa-terminal-parent" }],
+      }),
+    });
     const input: unknown[] = [makeUserInput("Subagent terminal reply QA check: visible.")];
     const request = () =>
       expectOpenAiNonStreamingResponsesJson(server, {
         tools: catalogTools,
         input,
-        instructions:
-          "Runtime: embedded | agent=qa | session=agent:qa:main | sessionId=qa-terminal-parent",
+        instructions: "Runtime: embedded | agent=qa | session=agent:qa:main",
       });
     const call = outputItem(await request());
     input.push(
