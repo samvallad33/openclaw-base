@@ -612,6 +612,7 @@ export const openClawStateDatabaseCache = {
   evictCachedOpenClawStateDatabase,
   evictOpenClawStateDatabaseAfterCorruption,
   getCachedOpenClawStateDatabase,
+  getOpenClawStateDatabaseRecordedFailure: terminalOpenLatch.peek,
   getOpenClawStateDatabaseRuntimeFailure: runtimeFailures.get,
   getOpenClawStateDatabaseIfOpenAtPath,
   getKnownOpenClawStateDatabaseIdentity: asyncResources.knownIdentity,
