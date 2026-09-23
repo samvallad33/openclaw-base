@@ -20,6 +20,7 @@ import {
 } from "../../suite-planning.js";
 import { resolveLiveTransportQaScenarioIds } from "../shared/scenario-selection.js";
 import { createWhatsAppQaScenarioEnvironment } from "./scenario-environment.js";
+import { whatsappScenarioImplementations } from "./scenario-implementations.js";
 import { runWhatsAppApprovalScenario } from "./whatsapp-live.approvals.js";
 import { buildWhatsAppQaConfig, parseWhatsAppQaCredentialPayload } from "./whatsapp-live.config.js";
 import {
@@ -36,10 +37,6 @@ import {
   runWhatsAppStructuredInboundChecks,
   waitForScenarioObservedMessage,
 } from "./whatsapp-live.operations.js";
-import * as whatsappCapabilityScenarios from "./whatsapp-live.scenario-implementations.capabilities.js";
-import * as whatsappConversationScenarios from "./whatsapp-live.scenario-implementations.conversation.js";
-import * as whatsappDeliveryScenarios from "./whatsapp-live.scenario-implementations.delivery.js";
-import * as whatsappUserPathScenarios from "./whatsapp-live.scenario-implementations.user-path.js";
 import { unpackWhatsAppAuthArchive } from "./whatsapp-live.setup.js";
 
 const runExecSpy = vi.hoisted(() =>
@@ -237,28 +234,14 @@ async function prepareWhatsAppFlowFixture(params: {
 
 type WhatsAppScenarioIdFilter = string;
 
-const whatsappScenarioImplementations = {
-  ...whatsappCapabilityScenarios,
-  ...whatsappConversationScenarios,
-  ...whatsappDeliveryScenarios,
-  ...whatsappUserPathScenarios,
-} as Record<string, WhatsAppQaScenarioImplementation>;
-
-function toWhatsAppScenarioExportName(id: string) {
-  const suffix = id
-    .slice("whatsapp-".length)
-    .split("-")
-    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
-    .join("");
-  return `whatsappQa${suffix}Scenario`;
-}
-
 function getWhatsAppScenario(id: string): WhatsAppScenarioDefinition {
-  const implementation = whatsappScenarioImplementations[toWhatsAppScenarioExportName(id)];
+  const scenario = requireFlowScenario(readQaScenarioById(id));
+  const name = scenario.execution.config?.whatsappScenario;
+  const implementation =
+    typeof name === "string" ? whatsappScenarioImplementations[name] : undefined;
   if (!implementation) {
     throw new Error(`missing WhatsApp test implementation for ${id}`);
   }
-  const scenario = requireFlowScenario(readQaScenarioById(id));
   return {
     ...implementation,
     id,
@@ -1132,15 +1115,12 @@ describe("WhatsApp QA live runtime", () => {
       }
       throw new Error(`unexpected gateway method: ${method}`);
     });
-    const prepared = await prepareWhatsAppFlowFixture({
-      config: {},
+    await prepareWhatsAppFlowFixture({
+      config: { whatsappScenario: "whatsappQaCanaryScenario" },
       gatewayCall,
       scenarioId: "whatsapp-canary",
       scenarioTitle: "WhatsApp DM canary",
     });
-    await prepared.whatsappScenarioContext.configureScenario(
-      getWhatsAppScenario("whatsapp-canary"),
-    );
 
     const patchCall = gatewayCall.mock.calls.find(([method]) => method === "config.patch");
     if (!patchCall) {
