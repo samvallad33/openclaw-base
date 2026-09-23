@@ -125,28 +125,36 @@ describe("runSessionsSendA2AFlow announce delivery", () => {
     expect(sendParams.threadId).toBeUndefined();
   });
 
-  it("bypasses the announce decider for same-session channel replies", async () => {
-    await runSessionsSendA2AFlow({
-      targetAgentId: "main",
-      targetSessionKey: "agent:main:discord:channel:target-room",
-      displayKey: "agent:main:discord:channel:target-room",
-      message: "Test message",
-      announceTimeoutMs: 10_000,
-      maxPingPongTurns: 2,
-      requesterSessionKey: "agent:main:discord:channel:target-room",
-      requesterChannel: "discord",
-      roundOneReply: "Substantive channel reply",
-    });
+  it.each([false, true])(
+    "bypasses the announce decider with captured route %s",
+    async (captured) => {
+      await runSessionsSendA2AFlow({
+        targetAgentId: "main",
+        targetSessionKey: "agent:main:discord:channel:target-room",
+        displayKey: "agent:main:discord:channel:target-room",
+        message: "Test message",
+        announceTimeoutMs: 10_000,
+        maxPingPongTurns: 2,
+        requesterSessionKey: "agent:main:discord:channel:target-room",
+        requesterChannel: "discord",
+        requesterOrigin: captured
+          ? { channel: "discord", to: "channel:original-room", accountId: "direct", threadId: "42" }
+          : undefined,
+        roundOneReply: "Substantive channel reply",
+      });
 
-    expect(runAgentStep).not.toHaveBeenCalled();
-    const sendCall = requireGatewayCall("send");
-    const sendParams = sendCall.params as Record<string, unknown>;
-    expect(sendParams.channel).toBe("discord");
-    expect(sendParams.to).toBe("channel:target-room");
-    expect(sendParams.message).toBe("Substantive channel reply");
-    expect(sendParams.agentId).toBe("main");
-    expect(sendParams).not.toHaveProperty("sessionKey");
-  });
+      expect(runAgentStep).not.toHaveBeenCalled();
+      const sendCall = requireGatewayCall("send");
+      const sendParams = sendCall.params as Record<string, unknown>;
+      expect(sendParams.channel).toBe("discord");
+      expect(sendParams.to).toBe(captured ? "channel:original-room" : "channel:target-room");
+      expect(sendParams.accountId).toBe(captured ? "direct" : undefined);
+      expect(sendParams.threadId).toBe(captured ? "42" : undefined);
+      expect(sendParams.message).toBe("Substantive channel reply");
+      expect(sendParams.agentId).toBe("main");
+      expect(sendParams).not.toHaveProperty("sessionKey");
+    },
+  );
 
   it.each([
     {
