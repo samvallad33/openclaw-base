@@ -32,6 +32,7 @@ export function createDeferredTurnMaintenanceAbortSignal(params?: {
   abortSignal: AbortSignal;
   dispose: () => void;
 } {
+  // SAFETY: process satisfies the listener surface; the registry slot is an optional symbol key.
   const processLike = (params?.processLike ?? process) as DeferredTurnMaintenanceProcessLike;
   const state = (processLike[DEFERRED_TURN_MAINTENANCE_ABORT_STATE_KEY] ??= {
     controllers: new Set<AbortController>(),
@@ -79,6 +80,7 @@ export function createDeferredTurnMaintenanceAbortSignal(params?: {
 }
 
 export function resetDeferredTurnMaintenanceAbortStateForTest(): void {
+  // SAFETY: process satisfies the listener surface; the registry slot is an optional symbol key.
   const processLike = process as DeferredTurnMaintenanceProcessLike;
   const state = processLike[DEFERRED_TURN_MAINTENANCE_ABORT_STATE_KEY];
   if (!state) {
