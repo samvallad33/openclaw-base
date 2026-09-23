@@ -1217,7 +1217,7 @@ async function buildResponsesPayload(
       });
     }
     if (hasCompletedToolOutput) {
-      return buildAssistantEvents("");
+      return buildAssistantEvents("NO_REPLY");
     }
   }
   const whatsAppUploadMatch = QA_WHATSAPP_AGENT_MESSAGE_ACTION_UPLOAD_PROMPT_RE.exec(allInputText);
@@ -1232,7 +1232,7 @@ async function buildResponsesPayload(
       });
     }
     if (hasCompletedToolOutput) {
-      return buildAssistantEvents("");
+      return buildAssistantEvents("NO_REPLY");
     }
   }
   if (
