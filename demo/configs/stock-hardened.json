@@ -1,0 +1,28 @@
+{
+  "_comment": "Stock at its strongest: allowlist mode, prompt on miss, deny when no responder. The allowlist is what a working developer actually ends up with — the usual read/dev tools plus rm for the agent's legitimate cleanup work.",
+  "tools": {
+    "exec": {
+      "mode": "allowlist"
+    }
+  },
+  "security": {
+    "execApprovals": {
+      "security": "allowlist",
+      "ask": "on-miss",
+      "askFallback": "deny",
+      "allowlist": [
+        { "pattern": "git" },
+        { "pattern": "node" },
+        { "pattern": "npm" },
+        { "pattern": "pnpm" },
+        { "pattern": "python3" },
+        { "pattern": "rg" },
+        { "pattern": "ls" },
+        { "pattern": "cat" },
+        { "pattern": "mkdir" },
+        { "pattern": "touch" },
+        { "pattern": "rm" }
+      ]
+    }
+  }
+}

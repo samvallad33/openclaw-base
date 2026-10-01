@@ -1,0 +1,33 @@
+{
+  "_comment": "Operator side: the same stock-hardened exec policy, PLUS Operator Lite installed from ClawHub. The plugin needs no config — it subscribes to before_tool_call, pipes every command through the bundled gate, and blocks on exit 2. Gate mode on disk: echo enforce > ~/.operator/mode (shadow first).",
+  "openclaw": {
+    "plugins": {
+      "install": ["vestige-operator-lite"]
+    }
+  },
+  "tools": {
+    "exec": {
+      "mode": "allowlist"
+    }
+  },
+  "security": {
+    "execApprovals": {
+      "security": "allowlist",
+      "ask": "on-miss",
+      "askFallback": "deny",
+      "allowlist": [
+        { "pattern": "git" },
+        { "pattern": "node" },
+        { "pattern": "npm" },
+        { "pattern": "pnpm" },
+        { "pattern": "python3" },
+        { "pattern": "rg" },
+        { "pattern": "ls" },
+        { "pattern": "cat" },
+        { "pattern": "mkdir" },
+        { "pattern": "touch" },
+        { "pattern": "rm" }
+      ]
+    }
+  }
+}

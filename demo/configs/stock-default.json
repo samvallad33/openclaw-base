@@ -1,0 +1,8 @@
+{
+  "_comment": "Out-of-the-box exec policy. tools.exec defaults per docs/tools/exec-approvals.md: security full, ask off. Host exec is unattended unless configured otherwise.",
+  "tools": {
+    "exec": {
+      "mode": "full"
+    }
+  }
+}
